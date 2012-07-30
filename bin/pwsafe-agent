@@ -1,0 +1,85 @@
+#!/usr/bin/env ruby
+require 'socket'
+require 'pathname'
+require 'logger' 
+
+AGENT_DIR  = File.expand_path('~/.pwsafe-agent')
+SOCKET_PATH = File.join(AGENT_DIR, 'socket')
+
+PID_FILE   = File.join(AGENT_DIR, 'pid')
+LOG_FILE   = File.join(AGENT_DIR, 'logs')
+
+LOGGER  = Logger.new(LOG_FILE)
+PWSTORE = Hash.new
+
+PWSTORE[:password] = Hash.new
+
+STORE_TIME = 60 * 10 # minutes
+
+if File.exists? PID_FILE
+  puts "Found pid at #{PID_FILE}, exiting"
+  exit 126 
+end
+
+`mkdir -p #{AGENT_DIR}`
+`rm #{SOCKET_PATH}`
+
+Process.daemon(true)
+
+def write_pid 
+  `echo "#{Process.pid}" > #{PID_FILE}`
+end
+
+def clear_pid 
+  `rm #{PID_FILE}`
+end
+
+Process.fork do 
+  write_pid
+
+  Signal.trap('TERM') do 
+    LOGGER.debug "Received TERM, exiting"
+    clear_pid && exit
+  end
+
+  begin
+    cleaner_thread = Thread.new do
+      loop do
+        begin 
+          sleep 10
+          if PWSTORE[:password][:time] && PWSTORE[:password][:time] < Time.now - STORE_TIME
+            PWSTORE[:password] = Hash.new
+          end
+        rescue => e
+          LOGGER.error "#{e.message}"
+        end
+      end
+    end
+
+    UNIXServer.open(SOCKET_PATH) do |server| 
+      while true do 
+        accepted = server.accept # this block
+        command = accepted.read
+        begin 
+          if command =~ /SET=(.+)/ 
+            PWSTORE[:password] = {:time => Time.now, :password => $1} 
+            accepted.write PWSTORE[:password][:password]
+          elsif command == 'GET' 
+            accepted.write PWSTORE[:password][:password]
+          elsif command == "FLUSH"
+            PWSTORE[:password] = Hash.new
+          else 
+            accepted.write "-"
+          end
+
+          accepted.close
+        rescue => e
+          LOGGER.error "#{e.message} #{e.backtrace.join}"
+        end
+      end
+    end
+  rescue => e
+    LOGGER.error "#{e.message} #{e.backtrace.join}"
+  end
+  clear_pid
+end

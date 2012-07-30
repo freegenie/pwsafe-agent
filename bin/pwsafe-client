@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby 
+# This should wrap pwsafe 
+#
+require File.expand_path('../lib/pwsafe-agent/client', File.dirname(__FILE__))
+
+Pwsafe::Agent::Client.new(ARGV).run 
