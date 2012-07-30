@@ -2,8 +2,7 @@ require 'socket'
 require 'pathname' 
 require 'logger'
 
-require_relative './driver'
-
+require File.expand_path('driver', File.dirname(__FILE__))
 
 module Pwsafe 
   module Agent 
