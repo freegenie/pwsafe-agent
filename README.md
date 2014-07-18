@@ -1,3 +1,7 @@
+# WARNING: 
+
+This software makes reading passwords from pwsafe less secure. 
+
 # Pwsafe::Agent
 
 This gem is a wrapper for pwsafe composed of two executables which aim 
