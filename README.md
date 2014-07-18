@@ -1,6 +1,6 @@
-# WARNING: 
+# WARNING 
 
-This software makes reading passwords from pwsafe less secure. 
+This software makes reading passwords from pwsafe less secure. [Read more here](https://github.com/freegenie/pwsafe-agent/issues/1).
 
 # Pwsafe::Agent
 
